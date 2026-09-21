@@ -1,0 +1,14 @@
+services:
+  api:
+    build: .
+    container_name: gasto-hogar-api
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://host.docker.internal:3306/gasto_hogar?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: gasto_user
+      SPRING_DATASOURCE_PASSWORD: gasto_password
+      JWT_SECRET: ChangeThisSecretKeyToAtLeast32CharactersLong!
+      APP_CORS_ALLOWED_ORIGINS: http://localhost:8100
+
+

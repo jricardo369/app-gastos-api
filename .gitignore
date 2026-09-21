@@ -1,0 +1,203 @@
+# ============================================================
+# Gasto Hogar API - Spring Boot + Java 21 + Maven
+# ============================================================
+
+# ===== IntelliJ IDEA / JetBrains (IntelliJ, PyCharm, WebStorm, Fleet, etc.) =====
+.idea/
+.idea_modules/
+*.iml
+*.ipr
+*.iws
+out/
+.fleet/
+idea.shelf/
+
+# ===== VS Code / Cursor / Zed =====
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.code-workspace
+.history/
+.cursor/
+.zed/
+
+# ===== Eclipse / Spring Tool Suite (STS) =====
+.classpath
+.project
+.settings/
+.factorypath
+.metadata/
+.externalToolBuilders/
+.sts4-cache/
+.apt_generated
+.apt_generated_tests
+.apt_generated_test
+bin/
+.recommenders/
+.springBeans
+.testplan
+test-output/
+springBeans/
+
+# ===== NetBeans =====
+nbproject/private/
+nbproject/Makefile-*.mk
+nbproject/Package-*.bash
+nbbuild/
+nbdist/
+dist/
+.nb-gradle/
+nbactions.xml
+nb-configuration.xml
+
+# ===== Visual Studio (por si se abre el repo desde VS) =====
+.vs/
+*.rsuser
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# ===== Otros editores =====
+*.sublime-project
+*.sublime-workspace
+*.swp
+*.swo
+*~
+.#*
+\#*#
+.ensime_cache/
+.metals/
+.bloop/
+.vscode-test/
+
+# ===== Compilacion Java / Maven / Gradle =====
+target/
+build/
+out/
+.gradle/
+.m2/
+gradle-app.setting
+!gradle-wrapper.jar
+!gradle/wrapper/gradle-wrapper.jar
+!mvn/wrapper/maven-wrapper.jar
+!.mvn/wrapper/maven-wrapper.jar
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+dependency-reduced-pom.xml
+buildNumber.properties
+.mvn/timing.properties
+*.class
+*.jar
+*.war
+*.ear
+*.nar
+*.zip
+*.tar.gz
+*.rar
+hs_err_pid*
+replay_pid*
+
+# ===== Logs y temporales =====
+logs/
+*.log
+*.tmp
+*.bak
+*.orig
+*.rej
+tmp/
+temp/
+.cache/
+
+# ===== Tests / Cobertura =====
+.jacoco/
+*.exec
+surefire-reports/
+failsafe-reports/
+
+# ===== Variables de entorno / secretos - NO SUBIR =====
+.env
+.env.*
+!.env.example
+!.env.prod.example
+*.pem
+*.key
+*.p12
+*.jks
+*.keystore
+*.truststore
+secrets/
+credentials.json
+
+# ===== Spring Boot - configuracion local (mantener la base en git) =====
+application-local.properties
+application-local.yml
+application-local.yaml
+application-secret.properties
+application-secret.yml
+application-*.local.properties
+config/application-local.properties
+# Nota: application.properties / application.yml base SÍ deben subirse
+
+# ===== Bases de datos locales / embebidas =====
+*.db
+*.sqlite
+*.sqlite3
+*.h2.db
+*.mv.db
+*.trace.db
+# Nota: las migraciones de Flyway (src/main/resources/db/migration/*.sql) SÍ deben subirse
+
+# ===== Docker / Compose overrides locales =====
+docker-compose.override.yml
+
+# ===== Node (por si se agrega frontend en el futuro) =====
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ===== Sistema operativo: macOS =====
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+.AppleDB
+.AppleDesktop
+Network Trash Folder
+Temporary Items
+.apdisk
+
+# ===== Sistema operativo: Windows =====
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+[Dd]esktop.ini
+$RECYCLE.BIN/
+*.stackdump
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+*.lnk
+
+# ===== Sistema operativo: Linux =====
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
