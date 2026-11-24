@@ -24,12 +24,13 @@ jobs:
         env:
           DEPLOY_BRANCH: ${{ github.ref_name }}
           EC2_PATH: ${{ secrets.EC2_PATH }}
+          REPO_URL: ${{ github.server_url }}/${{ github.repository }}.git
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
           port: ${{ secrets.EC2_SSH_PORT || '22' }}
-          envs: DEPLOY_BRANCH,EC2_PATH
+          envs: DEPLOY_BRANCH,EC2_PATH,REPO_URL
           script: |
             set -eu
 
@@ -37,7 +38,11 @@ jobs:
             BRANCH="${DEPLOY_BRANCH:-master}"
 
             echo "==> Directorio: $APP_DIR (rama $BRANCH)"
-            test -d "$APP_DIR/.git" || { echo "No hay un clone de git en $APP_DIR"; exit 1; }
+            if [ ! -d "$APP_DIR/.git" ]; then
+              echo "==> No hay clone; clonando $REPO_URL en $APP_DIR"
+              mkdir -p "$APP_DIR"
+              git clone "$REPO_URL" "$APP_DIR"
+            fi
 
             # La configuracion vive fuera del repo y sobrevive al reset --hard.
             test -f /opt/app-gastos-configs/application.properties || { echo "Falta /opt/app-gastos-configs/application.properties"; exit 1; }
