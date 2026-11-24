@@ -59,10 +59,10 @@ jobs:
 
             echo "==> Esperando healthcheck (hasta 3 minutos)"
             i=0
-            until docker inspect --format '{{.State.Health.Status}}' app-gastos-api 2>/dev/null | grep -q healthy; do
+            until [ "$(docker inspect --format '{{.State.Status}}:{{.State.Health.Status}}' app-gastos-api 2>/dev/null || true)" = "running:healthy" ]; do
               i=$((i + 1))
               if [ "$i" -ge 36 ]; then
-                echo "El contenedor no llego a healthy. Logs:"
+                echo "El contenedor no llego a running:healthy. Logs:"
                 docker compose logs --tail=80 api
                 exit 1
               fi
