@@ -23,16 +23,17 @@ jobs:
         uses: appleboy/ssh-action@v1
         env:
           DEPLOY_BRANCH: ${{ github.ref_name }}
+          EC2_PATH: ${{ secrets.EC2_PATH }}
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
           port: ${{ secrets.EC2_SSH_PORT || '22' }}
-          envs: DEPLOY_BRANCH
+          envs: DEPLOY_BRANCH,EC2_PATH
           script: |
             set -eu
 
-            APP_DIR="$HOME/gasto-hogar-api"
+            APP_DIR="${EC2_PATH:-$HOME/app-gastos-api}"
             BRANCH="${DEPLOY_BRANCH:-master}"
 
             echo "==> Directorio: $APP_DIR (rama $BRANCH)"
@@ -53,7 +54,7 @@ jobs:
 
             echo "==> Esperando healthcheck (hasta 3 minutos)"
             i=0
-            until docker inspect --format '{{.State.Health.Status}}' gasto-hogar-api 2>/dev/null | grep -q healthy; do
+            until docker inspect --format '{{.State.Health.Status}}' app-gastos-api 2>/dev/null | grep -q healthy; do
               i=$((i + 1))
               if [ "$i" -ge 36 ]; then
                 echo "El contenedor no llego a healthy. Logs:"

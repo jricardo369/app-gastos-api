@@ -16,7 +16,7 @@ WORKDIR /app
 
 # Usuario sin privilegios
 RUN addgroup -S app && adduser -S app -G app
-COPY --from=build /app/target/gasto-hogar-api-1.0.0.jar app.jar
+COPY --from=build /app/target/app-gastos-api-1.0.0.jar app.jar
 RUN chown -R app:app /app
 USER app
 
