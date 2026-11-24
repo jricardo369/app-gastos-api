@@ -1,198 +1,114 @@
-# Colección de ejemplos curl para Gasto Hogar API
+#!/usr/bin/env bash
+# Ejemplos curl para Gasto Hogar API.
+# Uso:  ./curl-examples.sh
+# Requiere: la API corriendo en $BASE (default http://localhost:8080) y curl + jq.
 
-## Registro de usuario
-```bash
-curl -X POST http://localhost:8080/api/v1/auth/register \
+set -euo pipefail
+
+BASE="${BASE:-http://localhost:8080}"
+API="$BASE/api/v1"
+
+# ---------------------------------------------------------------------------
+# 1. Registro: crea el usuario y su membresía inicial
+# ---------------------------------------------------------------------------
+echo "== Registro (crea usuario + membresía MONTH) =="
+curl -s -X POST "$API/auth/register" \
   -H "Content-Type: application/json" \
   -d '{
-    "email": "usuario@example.com",
-    "nombre": "Usuario Test",
-    "password": "password123"
-  }'
-```
+    "user": "juan",
+    "password": "secreto123",
+    "name": "Juan Pérez",
+    "address": "Av. Reforma 100",
+    "phone": "5551234567",
+    "email": "juan@example.com",
+    "membresiaType": "MONTH"
+  }' | jq .
+echo
 
-## Inicio de sesión
-```bash
-curl -X POST http://localhost:8080/api/v1/auth/login \
+# ---------------------------------------------------------------------------
+# 2. Login: devuelve token, usuario (sin password) y membresía activa
+# ---------------------------------------------------------------------------
+echo "== Login =="
+LOGIN=$(curl -s -X POST "$API/auth/login" \
+  -H "Content-Type: application/json" \
+  -d '{"user": "juan", "password": "secreto123"}')
+echo "$LOGIN" | jq .
+
+TOKEN=$(echo "$LOGIN" | jq -r '.data.token')
+ID_USER=$(echo "$LOGIN" | jq -r '.data.usuario.idUser')
+AUTH=(-H "Authorization: Bearer $TOKEN")
+echo "token obtenido, idUser=$ID_USER"
+echo
+
+# ---------------------------------------------------------------------------
+# 3. Usuario autenticado
+# ---------------------------------------------------------------------------
+echo "== GET /auth/me =="
+curl -s "$API/auth/me" "${AUTH[@]}" | jq .
+echo
+
+# ---------------------------------------------------------------------------
+# 4. CRUD de usuarios
+# ---------------------------------------------------------------------------
+echo "== POST /usuarios =="
+curl -s -X POST "$API/usuarios" "${AUTH[@]}" \
   -H "Content-Type: application/json" \
   -d '{
-    "email": "usuario@example.com",
-    "password": "password123"
-  }'
-```
+    "user": "ana",
+    "password": "secreto123",
+    "name": "Ana Ruiz",
+    "address": "Calle Falsa 123",
+    "phone": "5550001111",
+    "email": "ana@example.com"
+  }' | jq .
+echo
 
-## Obtener usuario autenticado (reemplazar TOKEN)
-```bash
-curl -X GET http://localhost:8080/api/v1/auth/me \
-  -H "Authorization: Bearer TOKEN"
-```
+echo "== GET /usuarios =="
+curl -s "$API/usuarios" "${AUTH[@]}" | jq .
+echo
 
-## Crear hogar
-```bash
-curl -X POST http://localhost:8080/api/v1/hogares \
-  -H "Authorization: Bearer TOKEN" \
+echo "== GET /usuarios/{idUser} =="
+curl -s "$API/usuarios/$ID_USER" "${AUTH[@]}" | jq .
+echo
+
+echo "== PUT /usuarios/{idUser} =="
+curl -s -X PUT "$API/usuarios/$ID_USER" "${AUTH[@]}" \
   -H "Content-Type: application/json" \
-  -d '{
-    "nombre": "Mi Hogar",
-    "moneda": "MXN",
-    "zonaHoraria": "America/Mexico_City"
-  }'
-```
+  -d '{"phone": "5559998888", "address": "Nueva direccion 999"}' | jq .
+echo
 
-## Obtener hogares
-```bash
-curl -X GET http://localhost:8080/api/v1/hogares \
-  -H "Authorization: Bearer TOKEN"
-```
-
-## Crear categoría
-```bash
-curl -X POST http://localhost:8080/api/v1/categorias \
-  -H "Authorization: Bearer TOKEN" \
+# ---------------------------------------------------------------------------
+# 5. Membresías
+# ---------------------------------------------------------------------------
+echo "== POST /membresias (anual para el usuario del token) =="
+NUEVA=$(curl -s -X POST "$API/membresias" "${AUTH[@]}" \
   -H "Content-Type: application/json" \
-  -d '{
-    "nombre": "Hogar",
-    "color": "#a8a4ff",
-    "icono": "house",
-    "estado": "ACTIVO"
-  }'
-```
+  -d "{\"idUser\": \"$ID_USER\", \"type\": \"YEAR\"}")
+echo "$NUEVA" | jq .
+ID_MEMBRESIA=$(echo "$NUEVA" | jq -r '.data.id')
+echo
 
-## Crear presupuesto
-```bash
-curl -X POST http://localhost:8080/api/v1/presupuestos \
-  -H "Authorization: Bearer TOKEN" \
+echo "== GET /membresias?idUser=... =="
+curl -s "$API/membresias?idUser=$ID_USER" "${AUTH[@]}" | jq .
+echo
+
+echo "== GET /membresias/{id} =="
+curl -s "$API/membresias/$ID_MEMBRESIA" "${AUTH[@]}" | jq .
+echo
+
+echo "== PUT /membresias/{id} (marcar INACTIVA) =="
+curl -s -X PUT "$API/membresias/$ID_MEMBRESIA" "${AUTH[@]}" \
   -H "Content-Type: application/json" \
-  -d '{
-    "anio": 2026,
-    "mes": 9,
-    "efectivoQ1": 13500,
-    "valesQ1": 1345,
-    "nominaQ1": 0,
-    "efectivoQ2": 13500,
-    "valesQ2": 1345,
-    "nominaQ2": 0
-  }'
-```
+  -d "{\"idUser\": \"$ID_USER\", \"type\": \"YEAR\", \"estado\": \"INACTIVA\"}" | jq .
+echo
 
-## Obtener resumen del presupuesto
-```bash
-curl -X GET "http://localhost:8080/api/v1/presupuestos/resumen?anio=2026&mes=9" \
-  -H "Authorization: Bearer TOKEN"
-```
+echo "== DELETE /membresias/{id} =="
+curl -s -X DELETE "$API/membresias/$ID_MEMBRESIA" "${AUTH[@]}" | jq .
+echo
 
-## Crear ingreso
-```bash
-curl -X POST http://localhost:8080/api/v1/presupuestos/ingresos \
-  -H "Authorization: Bearer TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "quincena": "Q1",
-    "concepto": "Nomina",
-    "monto": 13500
-  }'
-```
-
-## Crear gasto
-```bash
-curl -X POST http://localhost:8080/api/v1/gastos \
-  -H "Authorization: Bearer TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "descripcion": "Gasolina",
-    "importe": 700,
-    "categoriaId": "UUID-CATEGORIA",
-    "fecha": "2026-09-01",
-    "tipo": "FIJO",
-    "observaciones": "Gasolina del mes"
-  }'
-```
-
-## Obtener gastos con filtros
-```bash
-curl -X GET "http://localhost:8080/api/v1/gastos?quincena=Q1&tipo=FIJO&estadoPago=PENDIENTE&page=0&size=10&sort=fecha,desc" \
-  -H "Authorization: Bearer TOKEN"
-```
-
-## Marcar gasto como pagado
-```bash
-curl -X POST http://localhost:8080/api/v1/gastos/GASTO_ID/pagar \
-  -H "Authorization: Bearer TOKEN"
-```
-
-## Crear deuda
-```bash
-curl -X POST http://localhost:8080/api/v1/deudas \
-  -H "Authorization: Bearer TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "deudor": "Miguel Angel",
-    "descripcion": "Prestamo personal",
-    "importeTotal": 1000,
-    "fechaVencimiento": "2026-12-31"
-  }'
-```
-
-## Agregar pago parcial a deuda
-```bash
-curl -X POST http://localhost:8080/api/v1/deudas/DEUDA_ID/pagos \
-  -H "Authorization: Bearer TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "importe": 300,
-    "fecha": "2026-09-03"
-  }'
-```
-
-## Obtener resumen de deudas
-```bash
-curl -X GET http://localhost:8080/api/v1/deudas/resumen \
-  -H "Authorization: Bearer TOKEN"
-```
-
-## Crear tarjeta de crédito
-```bash
-curl -X POST http://localhost:8080/api/v1/tarjetas \
-  -H "Authorization: Bearer TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "titular": "Juan Perez",
-    "numero": "4111-1111-1111-1111",
-    "banco": "Banorte"
-  }'
-```
-
-## Crear movimiento de tarjeta
-```bash
-curl -X POST http://localhost:8080/api/v1/tarjetas/TARJETA_ID/movimientos \
-  -H "Authorization: Bearer TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "descripcion": "Compra Supermercado",
-    "fechaCompra": "2026-09-01",
-    "importe": 500,
-    "tipo": "COMPRA",
-    "cuotas": 1
-  }'
-```
-
-## Obtener movimientos de tarjeta
-```bash
-curl -X GET "http://localhost:8080/api/v1/tarjetas/TARJETA_ID/movimientos?estado=ACTIVO&tipo=COMPRA&page=0&size=10" \
-  -H "Authorization: Bearer TOKEN"
-```
-
-## Endpoints de catálogo
-```bash
-# Obtener estados permitidos
-curl -X GET http://localhost:8080/api/v1/catalogos/estados \
-  -H "Authorization: Bearer TOKEN"
-
-# Obtener tipos de gasto
-curl -X GET http://localhost:8080/api/v1/catalogos/tipos-gasto \
-  -H "Authorization: Bearer TOKEN"
-
-# Obtener tipos de movimiento de tarjeta
-curl -X GET http://localhost:8080/api/v1/catalogos/tipos-movimiento-tarjeta \
-  -H "Authorization: Bearer TOKEN"
-```
+# ---------------------------------------------------------------------------
+# 6. DELETE de usuario (elimina también sus membresías por cascada)
+# ---------------------------------------------------------------------------
+echo "== DELETE /usuarios/{idUser} =="
+curl -s -X DELETE "$API/usuarios/$ID_USER" "${AUTH[@]}" | jq .
+echo

@@ -1,0 +1,69 @@
+name: Deploy to EC2
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+# Si el deploy falla, cancela los deploys que esten en cola.
+concurrency:
+  group: deploy-ec2
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    name: Build and deploy to EC2
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1
+        env:
+          DEPLOY_BRANCH: ${{ github.ref_name }}
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          port: ${{ secrets.EC2_SSH_PORT || '22' }}
+          envs: DEPLOY_BRANCH
+          script: |
+            set -eu
+
+            APP_DIR="$HOME/gasto-hogar-api"
+            BRANCH="${DEPLOY_BRANCH:-master}"
+
+            echo "==> Directorio: $APP_DIR (rama $BRANCH)"
+            test -d "$APP_DIR/.git" || { echo "No hay un clone de git en $APP_DIR"; exit 1; }
+
+            # La configuracion vive fuera del repo y sobrevive al reset --hard.
+            test -f /opt/app-gastos-configs/application.properties || { echo "Falta /opt/app-gastos-configs/application.properties"; exit 1; }
+            git -C "$APP_DIR" fetch --quiet origin "$BRANCH"
+            git -C "$APP_DIR" reset --quiet --hard "origin/$BRANCH"
+            git -C "$APP_DIR" log -1 --oneline
+
+            echo "==> Construyendo imagen"
+            cd "$APP_DIR"
+            docker compose build api
+
+            echo "==> Levantando contenedores"
+            docker compose up -d --remove-orphans
+
+            echo "==> Esperando healthcheck (hasta 3 minutos)"
+            i=0
+            until docker inspect --format '{{.State.Health.Status}}' gasto-hogar-api 2>/dev/null | grep -q healthy; do
+              i=$((i + 1))
+              if [ "$i" -ge 36 ]; then
+                echo "El contenedor no llego a healthy. Logs:"
+                docker compose logs --tail=80 api
+                exit 1
+              fi
+              sleep 5
+            done
+
+            echo "==> API saludable"
+            docker compose ps
+            curl -fsS http://localhost:8080/seg-gastos/api/v1/docs > /dev/null
+            echo "Deploy OK: $BRANCH"

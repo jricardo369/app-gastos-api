@@ -1,5 +1,6 @@
 package com.vjtech.gastoshogar.adapter.config;
 
+import com.vjtech.gastoshogar.adapter.persistence.entity.UsuarioEntity;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
@@ -32,6 +33,13 @@ public class JwtUtil {
     public String generateToken(UserDetails userDetails) {
         Map<String, Object> claims = new HashMap<>();
         return createToken(claims, userDetails.getUsername());
+    }
+
+    public String generateTokenForUser(UsuarioEntity usuario) {
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("id_user", usuario.getIdUser().toString());
+        claims.put("email", usuario.getEmail());
+        return createToken(claims, usuario.getUser());
     }
 
     private String createToken(Map<String, Object> claims, String subject) {

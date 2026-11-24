@@ -1,131 +1,116 @@
 # Gasto Hogar API
 
-API REST para el control de gastos del hogar, diseñada para ser consumida por un frontend Ionic.
+API REST de apoyo para la app web de control de gastos. Gestiona usuarios, membresías y el respaldo del estado completo de la app. Diseñada para ser consumida por un frontend Ionic/Angular.
 
 ## Stack
 
-- **Java 21**
-- **Spring Boot 3.3.4**
-- **Spring Web, Spring Data JPA, Spring Security, Bean Validation**
-- **Flyway** (migraciones de base de datos)
-- **MySQL** (base de datos)
-- **Maven** (gestor de dependencias)
-- **OpenAPI/Swagger** (documentación)
-- **JUnit 5, Mockito** (pruebas)
+- Java 21, Spring Boot 3.3.4 (Web, Data JPA, Security, Validation)
+- MySQL 8, Flyway (migración `V2__limpieza_y_respaldos.sql`; `init.sql` es el script manual inicial)
+- JWT (jjwt), OpenAPI/Swagger, Maven, JUnit 5 + AssertJ
 
-## Estructura del proyecto
+## Estructura
 
 ```
 com.vjtech.gastoshogar/
 ├── adapter/
-│   ├── config/          # Seguridad, CORS, JWT, Swagger
-│   ├── persistence/     # Entidades JPA, Repositorios, Mappers
-│   └── rest/            # Controladores, DTOs, Excepciones
+│   ├── config/          # Seguridad, CORS, JWT, Swagger, ModelMapper
+│   ├── persistence/     # Entidades JPA y repositorios
+│   └── rest/            # Controladores, DTOs y manejo de excepciones
 ├── application/
-│   ├── port/in/         # Puertos de entrada (interfaces de uso)
-│   ├── port/out/        # Puertos de salida
-│   └── service/         # Implementaciones de casos de uso
-├── domain/
-│   ├── model/           # Modelos de dominio
-│   ├── enums/           # Enumeraciones
-│   └── port/            # Interfaces de repositorio de dominio
-└── common/              # Configuración compartida, excepciones
+│   ├── port/in/         # Puertos de entrada
+│   └── service/         # Implementaciones
+├── domain/enums/        # TipoMembresia, EstadoMembresia
+└── common/exception/    # Errores compartidos
 ```
 
-## Endpoints principales
+## Base de datos
+
+Solo tres tablas:
+
+| Tabla | Uso |
+|-------|-----|
+| `usuarios` | Credenciales y datos del usuario (`user` es el identificador de login) |
+| `membresias` | Plan `MONTH`/`YEAR`, `estado` `ACTIVA`/`INACTIVA` y vigencia |
+| `respaldos` | **Una fila por usuario** con `payload_json LONGTEXT`, `schema_version` y `updated_at` |
+
+Membresía activa = `estado = 'ACTIVA'` **y** `fecha_inicio <= hoy <= fecha_fin` (`MembresiaServiceImpl.findActiva`). Registrar un usuario crea automáticamente una membresía activa.
+
+El script `src/main/resources/db/migration/init.sql` crea la BD desde cero (borra y recrea las tablas). La migración `V2__limpieza_y_respaldos.sql` elimina las tablas antiguas (`categorias`, `dashboard`, `ingresos`, `gastos`) y crea `respaldos` sobre una BD ya existente.
+
+## Endpoints
+
+Base real: `http://<host>:8080/seg-gastos/api/v1` (el `context-path` es `/seg-gastos`).
+
+### Auth — público
 
 | Método | Endpoint | Descripción |
 |--------|----------|-------------|
-| POST | `/api/v1/auth/register` | Registrar usuario |
-| POST | `/api/v1/auth/login` | Iniciar sesión |
-| GET | `/api/v1/auth/me` | Obtener usuario autenticado |
-| GET/POST/PUT/DELETE | `/api/v1/hogares` | Gestionar hogares |
-| GET/POST/PUT/DELETE | `/api/v1/categorias` | Gestionar categorías |
-| GET/POST | `/api/v1/presupuestos` | Presupuestos |
-| GET | `/api/v1/presupuestos/resumen` | Resumen por quincena |
-| GET/POST/PUT/DELETE | `/api/v1/gastos` | Gastos |
-| POST | `/api/v1/gastos/{id}/pagar` | Marcar gasto como pagado |
-| GET/POST/PUT/DELETE | `/api/v1/deudas` | Deudas |
-| POST | `/api/v1/deudas/{id}/pagos` | Agregar pago a deuda |
-| GET/POST/PUT/DELETE | `/api/v1/tarjetas` | Tarjetas de crédito |
-| GET | `/api/v1/tarjetas/{id}/movimientos` | Movimientos de tarjeta |
+| POST | `/auth/register` | Registra usuario + membresía inicial. Requiere `user`, `password` (6-100), `name`, `email`, `membresiaType` (`MONTH`/`YEAR`) |
+| POST | `/auth/login` | `{"user":"...","password":"..."}` → token JWT |
 
-## Documentación
+### Requieren JWT
 
-La documentación OpenAPI (Swagger) está disponible en: `http://localhost:8080/swagger-ui/index.html`
-La referencia de la API está disponible en: `http://localhost:8080/v3/api-docs`
+| Método | Endpoint | Descripción |
+|--------|----------|-------------|
+| GET | `/auth/me` | Usuario autenticado + `membresiaActiva` |
+| GET/POST/PUT/DELETE | `/usuarios` | CRUD de usuarios |
+| GET/POST/PUT/DELETE | `/membresias` | CRUD de membresías |
+| POST | `/respaldos` | Guarda el JSON completo de la app (`schemaVersion`, `payload`) |
+| GET | `/respaldos` | Recupera el último respaldo del usuario |
 
-## Variables de entorno
+`/respaldos` devuelve **403** si el usuario no tiene membresía activa. El payload es opaco para la API: se guarda tal cual para poder recuperarlo o generar reportes después.
 
-| Variable | Descripción | Default |
-|----------|-------------|---------|
-| `JWT_SECRET` | Clave secreta para JWT | `ChangeThisSecretKeyToAtLeast32CharactersLong!` |
-| `JWT_EXPIRATION` | Expiración del token en ms | `86400000` |
-| `SPRING_DATASOURCE_URL` | URL de conexión a MySQL | `jdbc:mysql://localhost:3306/gasto_hogar` |
-| `SPRING_DATASOURCE_USERNAME` | Usuario de BD | `root` |
-| `SPRING_DATASOURCE_PASSWORD` | Contraseña de BD | `` |
-| `APP_CORS_ALLOWED_ORIGINS` | Orígenes CORS permitidos | `http://localhost:8100` |
+Las respuestas exitosas vienen en `ApiResponse<T>` (`data` contiene el objeto). Los errores usan `ApiErrorResponse` (`code`, `message`, `fieldErrors`).
 
-## Comandos
+## Ejemplos
 
-### Ejecutar la aplicación
+```bash
+# Registro
+curl -X POST http://localhost:8080/seg-gastos/api/v1/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"user":"juan","password":"secreto123","name":"Juan","email":"juan@example.com","membresiaType":"MONTH"}'
+
+# Login
+curl -X POST http://localhost:8080/seg-gastos/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"user":"juan","password":"secreto123"}'
+
+# Subir respaldo
+curl -X POST http://localhost:8080/seg-gastos/api/v1/respaldos \
+  -H "Content-Type: application/json" -H "Authorization: Bearer <TOKEN>" \
+  -d '{"schemaVersion":1,"payload":"{\"gastos\":[],\"deudas\":[]}"}'
+```
+
+## Configuración
+
+La configuración **no está en el repo**: se carga desde un `application.properties` externo mediante `spring.config.additional-location`, que tiene prioridad sobre el `application.properties` del classpath.
+
+| Entorno | Ruta | Cómo se carga |
+|---------|------|---------------|
+| Local (`mvn spring-boot:run`) | `C:\config-apps\app-gastos-configs\application.properties` | `pom.xml` (propiedad `app.config.location`, se puede sobrescribir con `-Dapp.config.location=...`) |
+| EC2 (Docker) | `/opt/app-gastos-configs/application.properties` | `docker-compose.yml` monta el directorio readonly y el `Dockerfile` pasa `CONFIG_LOCATION` |
+
+Contenido del archivo (claves nativas de Spring):
+
+```properties
+spring.datasource.url=jdbc:mysql://127.0.0.1:3306/seguimiento_gastos?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+spring.datasource.username=root
+spring.datasource.password=TU_PASSWORD_LOCAL
+jwt.secret=CAMBIAR_POR_UNA_CLAVE_DE_AL_MENOS_32_CARACTERES
+jwt.expiration=86400000
+app.cors.allowed-origins=http://localhost:4200,http://localhost:8100,http://127.0.0.1:4200,http://127.0.0.1:8100
+```
+
+En EC2 usa `host.docker.internal:3306` en la URL (MySQL en la misma máquina) y los valores de JWT/CORS de producción. Si el archivo no existe, la app arranca con los defaults del classpath (la location es `optional:`).
+
+Swagger: `/seg-gastos/swagger-ui.html` y `/seg-gastos/api/v1/docs`. Usa **Authorize** con el token JWT (sin `Bearer`).
+
+## Ejecutar y probar
+
 ```bash
 mvn spring-boot:run
-```
-
-### Compilar y ejecutar pruebas
-```bash
 mvn clean test
-```
-
-### Construir el JAR
-```bash
 mvn clean package
-java -jar target/gasto-hogar-api-1.0.0.jar
 ```
 
-### Ejecutar migraciones de base de datos
-```bash
-mvn flyway:migrate
-```
-
-### Levantar la API con Docker
-```bash
-docker-compose up -d
-```
-
-La API necesita tener MySQL instalado en tu máquina local con la base de datos `gasto_hogar` y el usuario `gasto_user` con contraseña `gasto_password`.
-
-### Crear la base de datos en MySQL local
-```bash
-mysql -u root -p < setup-database.sql
-```
-
-## Prerrequisitos
-
-- Java 21+ o Docker
-- Maven 3.9+ (solo si corres sin Docker)
-- MySQL 8.0+
-
-## Notas de diseño
-
-- **BigDecimal** para todos los importes monetarios con `RoundingMode.HALF_UP` y escala 2
-- **Autenticación JWT stateless** con BCrypt para contraseñas
-- **Aislamiento por usuario**: cada usuario solo accede a sus propios datos
-- **Formato de respuesta consistente**: `ApiResponse<T>` con `timestamp`, `status`, `code`, `message`, `data`
-- **Manejo de errores**: formato `timestamp`, `status`, `code`, `message`, `path`, `fieldErrors`
-
-## Token JWT
-
-El login devuelve un JWT en `data.data.token`. Para usarlo en peticiones posteriores:
-- Guardar en `localStorage` con clave `gastos_auth_token`
-- Enviar en header `Authorization: Bearer <token>`
-- La app frontend (Angular/Ionic) usa este token automáticamente
-
-## App Frontend
-
-La app Ionic/Angular está en `/Users/joser.vazquez/Proyecto/DiseñoAppGastos/app/`:
-- `useRest = true` y `restBaseUrl = 'http://localhost:8080/api/v1'` en `AuthService`
-- Token guardado automáticamente en `localStorage` tras login
-- `authHeaders()` y `authFetch()` disponibles en `auth.service.ts`
-- Swagger UI: `http://localhost:8080/swagger-ui/index.html`
+Docker: `docker compose up -d --build` (ya no requiere `.env`, pero necesita `/opt/app-gastos-configs/application.properties`). El deploy a EC2 se hace con `.github/workflows/deploy.yml`.
