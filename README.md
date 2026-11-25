@@ -39,7 +39,7 @@ El script `src/main/resources/db/migration/init.sql` crea la BD desde cero (borr
 
 ## Endpoints
 
-Base real: `http://<host>:8080/seg-gastos/api/v1` (el `context-path` es `/seg-gastos`).
+Base real en EC2: `http://<host>/seg-gastos/api/v1` (proxy nginx en el puerto 80; el contenedor sigue escuchando en `8080`). En local: `http://localhost:8080/seg-gastos/api/v1`. El `context-path` es `/seg-gastos`.
 
 ### Auth — público
 
@@ -103,7 +103,7 @@ app.cors.allowed-origins=http://localhost:4200,http://localhost:8100,http://127.
 
 En EC2 usa `host.docker.internal:3306` en la URL (MySQL en la misma máquina) y los valores de JWT/CORS de producción. Si el archivo no existe, la app arranca con los defaults del classpath (la location es `optional:`).
 
-Swagger: `/seg-gastos/swagger-ui.html` y `/seg-gastos/api/v1/docs`. Usa **Authorize** con el token JWT (sin `Bearer`).
+Swagger en EC2: `http://<host>/seg-gastos/swagger-ui.html` y `http://<host>/seg-gastos/api/v1/docs`. En local usa `http://localhost:8080/seg-gastos/swagger-ui.html`. Usa **Authorize** con el token JWT (sin `Bearer`).
 
 ## Ejecutar y probar
 
