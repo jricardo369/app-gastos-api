@@ -101,7 +101,7 @@ jwt.expiration=86400000
 app.cors.allowed-origins=http://localhost:4200,http://localhost:8100,http://127.0.0.1:4200,http://127.0.0.1:8100
 ```
 
-En EC2 usa `host.docker.internal:3306` en la URL (MySQL en la misma máquina) y los valores de JWT/CORS de producción. Si el archivo no existe, la app arranca con los defaults del classpath (la location es `optional:`).
+En EC2 el contenedor corre con `network_mode: host`, así que usa `127.0.0.1:3306` en la URL (MySQL en la misma máquina) y los valores de JWT/CORS de producción. Si el archivo no existe, la app arranca con los defaults del classpath (la location es `optional:`).
 
 Swagger en EC2: `http://<host>/seg-gastos/swagger-ui.html` y `http://<host>/seg-gastos/api/v1/docs`. En local usa `http://localhost:8080/seg-gastos/swagger-ui.html`. Usa **Authorize** con el token JWT (sin `Bearer`).
 

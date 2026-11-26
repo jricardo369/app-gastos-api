@@ -3,12 +3,12 @@ services:
     build: .
     container_name: app-gastos-api
     restart: unless-stopped
-    ports:
-      - "8080:8080"
-    # Permite resolver "host.docker.internal" desde el contenedor.
-    # Necesario en Linux (incluido EC2); en Docker Desktop ya viene por defecto.
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    network_mode: host
     # Configuracion externa: /opt/app-gastos-configs/application.properties
     environment:
       CONFIG_LOCATION: /opt/app-gastos-configs/

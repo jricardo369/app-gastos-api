@@ -46,9 +46,34 @@ jobs:
 
             # La configuracion vive fuera del repo y sobrevive al reset --hard.
             test -f /opt/app-gastos-configs/application.properties || { echo "Falta /opt/app-gastos-configs/application.properties"; exit 1; }
+
+            echo "==> Verificar MySQL en el host"
+            sudo systemctl enable --now mysql 2>/dev/null || sudo systemctl enable --now mysqld 2>/dev/null || true
+            i=0
+            until sudo ss -ltn | grep -q ':3306 '; do
+              i=$((i + 1))
+              if [ "$i" -ge 30 ]; then
+                echo "MySQL no escucha en 3306; logs:"
+                sudo journalctl -u mysql -b -n 60 --no-pager || true
+                exit 1
+              fi
+              sleep 2
+            done
+
             git -C "$APP_DIR" fetch --quiet origin "$BRANCH"
             git -C "$APP_DIR" reset --quiet --hard "origin/$BRANCH"
             git -C "$APP_DIR" log -1 --oneline
+
+            echo "==> Limpieza de Docker antes del build"
+            df -h / | tail -1
+            docker image prune -af || true
+            docker builder prune -af || true
+            df -h / | tail -1
+            AVAIL_KB="$(df -Pk / | awk 'NR==2 {print $4}')"
+            if [ "$AVAIL_KB" -lt 1000000 ]; then
+              echo "Menos de 1 GB libre en /; aborto antes del build"
+              exit 1
+            fi
 
             echo "==> Construyendo imagen"
             cd "$APP_DIR"
@@ -56,6 +81,7 @@ jobs:
 
             echo "==> Levantando contenedores"
             docker compose up -d --remove-orphans
+            docker image prune -f || true
 
             echo "==> Esperando healthcheck (hasta 3 minutos)"
             i=0
@@ -71,5 +97,6 @@ jobs:
 
             echo "==> API saludable"
             docker compose ps
+            df -h / | tail -1
             curl -fsS http://localhost:8080/seg-gastos/api/v1/docs > /dev/null
             echo "Deploy OK: $BRANCH"
