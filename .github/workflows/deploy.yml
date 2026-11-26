@@ -64,11 +64,9 @@ jobs:
             git -C "$APP_DIR" reset --quiet --hard "origin/$BRANCH"
             git -C "$APP_DIR" log -1 --oneline
 
-            echo "==> Limpieza de Docker antes del build"
+            echo "==> Espacio antes del build"
             df -h / | tail -1
-            docker image prune -af || true
-            docker builder prune -af || true
-            df -h / | tail -1
+            docker image prune -f || true
             AVAIL_KB="$(df -Pk / | awk 'NR==2 {print $4}')"
             if [ "$AVAIL_KB" -lt 1000000 ]; then
               echo "Menos de 1 GB libre en /; aborto antes del build"
@@ -81,7 +79,9 @@ jobs:
 
             echo "==> Levantando contenedores"
             docker compose up -d --remove-orphans
-            docker image prune -f || true
+            docker image prune -af || true
+            docker builder prune -f --filter "until=24h" || true
+            docker container prune -f || true
 
             echo "==> Esperando healthcheck (hasta 3 minutos)"
             i=0
