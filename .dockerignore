@@ -1,6 +1,9 @@
 target/
 node_modules/
 .idea/
+.vscode/
+.github/
+.opencode/
 *.iml
 .DS_Store
 .git/

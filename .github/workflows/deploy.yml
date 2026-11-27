@@ -75,6 +75,7 @@ jobs:
 
             echo "==> Construyendo imagen"
             cd "$APP_DIR"
+            export DOCKER_BUILDKIT=1 COMPOSE_DOCKER_CLI_BUILD=1
             docker compose build api
 
             echo "==> Levantando contenedores"
