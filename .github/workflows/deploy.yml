@@ -82,6 +82,7 @@ jobs:
             docker compose up -d --remove-orphans
             docker image prune -af || true
             docker builder prune -f --filter "until=24h" || true
+            docker buildx prune -f --filter "until=24h" || true
             docker container prune -f || true
 
             echo "==> Esperando healthcheck (hasta 3 minutos)"
